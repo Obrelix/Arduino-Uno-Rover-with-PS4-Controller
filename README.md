@@ -3,17 +3,17 @@
 ![Rover Image](Images/4_Wheel_All_Drive_v63.png)
 
 
-This project showcases an Arduino Uno-based rover with an innovative PS4 controller interface. The rover boasts four 65mm rubber wheels, driven by four JGB370-3530 brushed geared motors and controlled by dual L298N motor drivers. It runs on four 18650 Li-Ion batteries with a 4S BMS, ensuring ample power for all its electronic components.
+This project showcases an Arduino Uno-based rover with a PS4 controller interface. The rover boasts four 65mm rubber wheels, driven by four JGB370-3530 brushed geared motors and controlled by dual L298N motor drivers. It runs on four 18650 Li-Ion batteries with a 4S BMS, ensuring ample power for all its electronic components for about 15-25 minutes.
 
 ## Key Features
 
-- **PS4 Controller Integration:** Effortlessly control the rover via Bluetooth using a PS4 controller, enabled by the Arduino USB host shield and a Bluetooth dongle.
+- **PS4 Controller Integration:** Control the rover via Bluetooth using a PS4 controller, enabled by the Arduino USB host shield and a Bluetooth dongle.
 
 - **Versatile Control Modes:** Choose from various control modes, including tank mode, joystick-controlled car mode, trigger and joystick-controlled car mode, trigger and accelerometer-controlled car mode, and a whimsical car mode for added entertainment.
 
 - **Turbo Mode:** Unleash the full potential of the rover's motors for thrilling performance by maximizing the PWM signal that controls motor speed. Use this feature with caution.
 
-- **3D-Printed Chassis:** The project includes 3D-printed chassis and shell models, designed with Fusion 360. These models are conveniently divided into parts for seamless printing and assembly.
+- **3D-Printed Chassis:** The project includes 3D-printed chassis and shell models, designed with Fusion 360. These models are conveniently divided into parts for easier printing and assembly.
 
 ## Getting Started
 
@@ -60,6 +60,8 @@ This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE
 Feel free to contribute, enhance, or customize this project as needed. If you have questions or feedback, please open an issue or get in touch with us.
 
 Happy roving! 🚀
+
+
 ## Images
 
 ![Rover Image](Images/4_Wheel_AWD_v63_NoShell.png)
