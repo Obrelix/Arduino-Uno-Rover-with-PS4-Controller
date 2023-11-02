@@ -3,7 +3,7 @@
 ![Rover Image](Images/4_Wheel_All_Drive_v63.png)
 
 
-This project showcases an Arduino Uno-based rover with a PS4 controller interface. The rover boasts four 65mm rubber wheels, driven by four JGB370-3530 brushed geared motors and controlled by dual L298N motor drivers. It runs on four 18650 Li-Ion batteries with a 4S BMS, ensuring ample power for all its electronic components for about 15-25 minutes.
+This project showcases an Arduino Uno-based rover with a PS4 controller interface. The rover boasts four 65mm rubber wheels, driven by four JGB370-3530 brushed geared motors and controlled by dual L298N motor drivers. It runs on four 18650 Li-Ion batteries with a 4S BMS, ensuring ample power for all its electronic components for approximately 15-25 minutes on a single charge.
 
 ## Key Features
 
