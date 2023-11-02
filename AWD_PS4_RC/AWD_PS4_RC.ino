@@ -103,11 +103,11 @@ int16_t trigger_throttle_value = 0;
 unsigned long current_millis = 0;
 const uint8_t turbo_sequence_threshold = 300;
 const uint8_t mode_count = 4;
-const uint8_t motor_count = 2;                   // Number of controlling motors
-const uint8_t pwm_pins[2] = { 3, 5 };           // pins 3 and 5 of the arduino uno controlling speed with pwm signal with pins (ENA, ENB) of the L298n drive
-const uint8_t forward_dir_pins[2] = { 4, 7 };   // pins 4 and 7 of the arduino uno enable the forward movement pins (IN1,IN3) of the L298n drive
-const uint8_t backward_dir_pins[2] = { 8, 6 };  // pins 8 and 6 of the arduino uno enable the backward movement pins (IN2,IN4) of the L298n drive
-uint8_t mode = 0;                               //  0 -> tank, 1 -> car, 2 -> car trigger, 3 -> car accel, 4 -> funky car
+const uint8_t motor_count = 2;                  // Number of controlling motors
+const uint8_t pwm_pins[2] = { 6, 5 };           // pins 6 and 5  [980 Hz PWM] of the arduino uno controlling speed with pwm signal with pins (ENA, ENB) of the L298n drive
+const uint8_t forward_dir_pins[2] = { 8, 3 };   // pins 8 and 3 of the arduino uno enable the forward movement pins (IN1,IN3) of the L298n drive
+const uint8_t backward_dir_pins[2] = { 7, 4 };  // pins 7 and 4 of the arduino uno enable the backward movement pins (IN2,IN4) of the L298n drive
+int8_t mode = 0;                                //   0 -> car, 1 -> car trigger, 2 -> car accel, 3 -> funky car 4 -> tank
 uint8_t pwm_max = 0;
 uint8_t steering_pwm_min = 0;
 uint8_t steering_pwm_max = 0;
@@ -141,30 +141,20 @@ void loop() {
 }
 
 void run_motors() {  // This function controls the motors based on the motor data, including direction and PWM values.
-  if (motor_data.motor_left_stop && motor_data.motor_left_stop_count < 10) {
-    motor_data.motor_left_stop_count++;
+  if (motor_data.motor_left_stop && motor_data.motor_left_update) {
     analogWrite(pwm_pins[0], 254);
     digitalWrite(forward_dir_pins[0], 0);
     digitalWrite(backward_dir_pins[0], 0);
-  } else if (motor_data.motor_left_stop) {
-    analogWrite(pwm_pins[0], 0);
-    motor_data.motor_left_stop = 0;
   } else if (motor_data.motor_left_update) {
-    motor_data.motor_left_stop_count = 0;
     analogWrite(pwm_pins[0], motor_data.motor_left_pwm);
     digitalWrite(forward_dir_pins[0], motor_data.motor_left_dir == 1);
     digitalWrite(backward_dir_pins[0], motor_data.motor_left_dir != 1);
   }
-  if (motor_data.motor_right_stop && motor_data.motor_right_stop_count < 10) {
-    motor_data.motor_right_stop_count++;
+  if (motor_data.motor_right_stop && motor_data.motor_right_update) {
     analogWrite(pwm_pins[1], 254);
     digitalWrite(forward_dir_pins[1], 0);
     digitalWrite(backward_dir_pins[1], 0);
-  } else if (motor_data.motor_right_stop) {
-    analogWrite(pwm_pins[1], 0);
-    motor_data.motor_right_stop = 0;
   } else if (motor_data.motor_right_update) {
-    motor_data.motor_right_stop_count = 0;
     analogWrite(pwm_pins[1], motor_data.motor_right_pwm);
     digitalWrite(forward_dir_pins[1], motor_data.motor_right_dir == 1);
     digitalWrite(backward_dir_pins[1], motor_data.motor_right_dir != 1);
@@ -193,7 +183,7 @@ void get_controller_values() {  // This function retrieves various controller in
   controller_data.down_Btn = PS4.getButtonClick(DOWN);
   // controller_data.left_Btn = PS4.getButtonClick(LEFT);
   // controller_data.right_Btn = PS4.getButtonClick(RIGHT);
-  if (mode >= 3) {
+  if (mode == 2 || mode == 3) {
     // controller_data.gyro_x = PS4.getSensor(gX);
     // controller_data.gyro_y = PS4.getSensor(gY);
     // controller_data.gyro_z = PS4.getSensor(gZ);
@@ -286,29 +276,29 @@ void set_drive_mode() {  // This function sets the drive mode based on the contr
   prev_motor_data = motor_data;
   trigger_throttle_value = controller_data.R2 - controller_data.L2;
   switch (mode) {
-    case 0:  // Tank mode controlled with the joysticks
-      set_tank_mode();
-      break;
-    case 1:  // Car mode controlled with the joysticks
+    case 0:  // Car mode controlled with the joysticks
       set_direction_data(controller_data.joy_right_PotY, 0, 110, 254, 140);
       set_steering_data(controller_data.joy_left_PotX, 0, 110, 254, 140);
       break;
-    case 2:  // Car mode controlled with the R2,L2 triggers and the left joystick
+    case 1:  // Car mode controlled with the R2,L2 triggers and the left joystick
       set_direction_data(trigger_throttle_value, -255, -10, 255, 10);
       set_steering_data(controller_data.joy_left_PotX, 0, 110, 254, 140);
       break;
-    case 3:  // Car mode controlled with the R2,L2 triggers and the accelerometer
+    case 2:  // Car mode controlled with the R2,L2 triggers and the accelerometer
       set_direction_data(trigger_throttle_value, -255, -10, 255, 10);
       set_steering_data(controller_data.acc_x, -8500, -2000, 8500, 2000);
       break;
-    case 4:  // Car mode controlled only with the accelerometer
+    case 3:  // Car mode controlled only with the accelerometer
       set_direction_data(controller_data.acc_y, -8500, -2000, 8500, 2000);
       set_steering_data(controller_data.acc_x, -8500, -2000, 8500, 2000);
+      break;
+    case 4:  // Tank mode controlled with the joysticks
+      set_tank_mode();
       break;
     default:
       break;
   }
-  if (mode != 0)
+  if (mode != 4)
     set_motor_data();
 }
 
@@ -356,10 +346,10 @@ void set_tank_mode() {
 // This function sets the drive direction and throttle value based on the input throttle parameter, considering the specified minimum and maximum values with offsets.
 void set_direction_data(int16_t throttle_param, int16_t minVal, int16_t offsetMinVal, int16_t maxVal, int16_t offsetMaxVal) {
   if (throttle_param > offsetMaxVal) {
-    drive_data.drive_direction = mode == 1 ? 2 : 1;
+    drive_data.drive_direction = mode == 0 ? 2 : 1;
     drive_data.throttle_value = map(throttle_param, offsetMaxVal, maxVal, 0, 100);
   } else if (throttle_param < offsetMinVal) {
-    drive_data.drive_direction = mode == 1 ? 1 : 2;
+    drive_data.drive_direction = mode == 0 ? 1 : 2;
     drive_data.throttle_value = map(throttle_param, offsetMinVal, minVal, 0, 100);
   } else {
     drive_data.drive_direction = 0;
@@ -370,10 +360,10 @@ void set_direction_data(int16_t throttle_param, int16_t minVal, int16_t offsetMi
 // This function sets the turn direction and steering value based on the input steering parameter, considering the specified minimum and maximum values with offsets.
 void set_steering_data(int16_t steering_param, int16_t minVal, int16_t offsetMinVal, int16_t maxVal, int16_t offsetMaxVal) {
   if (steering_param > offsetMaxVal) {
-    drive_data.turn_direction = mode == 4 || mode == 3 ? 2 : 1;
+    drive_data.turn_direction = mode == 3 || mode == 2 ? 2 : 1;
     drive_data.steering_value = map(steering_param, offsetMaxVal, maxVal, 0, 100);
   } else if (steering_param < offsetMinVal) {
-    drive_data.turn_direction = mode == 4 || mode == 3 ? 1 : 2;
+    drive_data.turn_direction = mode == 3 || mode == 2 ? 1 : 2;
     drive_data.steering_value = map(steering_param, offsetMinVal, minVal, 0, 100);
   } else {
     drive_data.turn_direction = 0;
@@ -424,19 +414,19 @@ void print_mode() {  // This function prints the current driving mode to the ser
   Serial.print(F("\r\nOptions, changing mode to : "));
   switch (mode) {
     case 0:
-      Serial.print(F("Tank"));
-      break;
-    case 1:
       Serial.print(F("Car_Joystick"));
       break;
-    case 2:
+    case 1:
       Serial.print(F("Car_Triggers"));
       break;
-    case 3:
+    case 2:
       Serial.print(F("Car_Accel_Triggers"));
       break;
-    case 4:
+    case 3:
       Serial.print(F("Funky_Car"));
+      break;
+    case 4:
+      Serial.print(F("Tank"));
       break;
     default:
       break;
@@ -448,50 +438,50 @@ void set_controller_color() {  // This function updates the PS4 controller's LED
   if (turbo_data.ENABLED) {
     Color current_color;
     switch (mode) {
-      case 0:  // Tank
-        current_color.r = (tank_color.r + turbo_color.r) / 2;
-        current_color.g = (tank_color.g + turbo_color.g) / 2;
-        current_color.b = (tank_color.b + turbo_color.b) / 2;
-        break;
-      case 1:  //car
+      case 0:  //car
         current_color.r = (car_color.r + turbo_color.r) / 2;
         current_color.g = (car_color.g + turbo_color.g) / 2;
         current_color.b = (car_color.b + turbo_color.b) / 2;
         break;
-      case 2:
+      case 1:
         current_color.r = (car_trigger_color.r + turbo_color.r) / 2;
         current_color.g = (car_trigger_color.g + turbo_color.g) / 2;
         current_color.b = (car_trigger_color.b + turbo_color.b) / 2;
         break;
-      case 3:
+      case 2:
         current_color.r = (car_accel_color.r + turbo_color.r) / 2;
         current_color.g = (car_accel_color.g + turbo_color.g) / 2;
         current_color.b = (car_accel_color.b + turbo_color.b) / 2;
         break;
-      case 4:
+      case 3:
         current_color.r = (funky_car_color.r + turbo_color.r) / 2;
         current_color.g = (funky_car_color.g + turbo_color.g) / 2;
         current_color.b = (funky_car_color.b + turbo_color.b) / 2;
+        break;
+      case 4:  // Tank
+        current_color.r = (tank_color.r + turbo_color.r) / 2;
+        current_color.g = (tank_color.g + turbo_color.g) / 2;
+        current_color.b = (tank_color.b + turbo_color.b) / 2;
         break;
       default:
         break;
     }
     PS4.setLed(current_color.r, current_color.g, current_color.b);
   } else switch (mode) {
-      case 0:  // Tank
-        PS4.setLed(tank_color.r, tank_color.g, tank_color.b);
-        break;
-      case 1:  //car
+      case 0:  //car
         PS4.setLed(car_color.r, car_color.g, car_color.b);
         break;
-      case 2:
+      case 1:
         PS4.setLed(car_trigger_color.r, car_trigger_color.g, car_trigger_color.b);
         break;
-      case 3:
+      case 2:
         PS4.setLed(car_accel_color.r, car_accel_color.g, car_accel_color.b);
         break;
-      case 4:
+      case 3:
         PS4.setLed(funky_car_color.r, funky_car_color.g, funky_car_color.b);
+        break;
+      case 4:  // Tank
+        PS4.setLed(tank_color.r, tank_color.g, tank_color.b);
         break;
       default:
         break;
@@ -537,7 +527,7 @@ void set_default_values() {  // This function initializes default values for var
 void print_debug_data() {  // Depending on the debug flags, this function prints debug data related to motors and controller inputs to the serial console.
 #ifdef DEBUG_MOTORS
   if ((motor_data.motor_left_update) || (motor_data.motor_right_update) || (motor_data.motor_right_stop && motor_data.motor_right_stop_count < 20) || (motor_data.motor_left_stop && motor_data.motor_left_stop_count < 20)) {
-    Serial.print(F("\r\nMotorLeft: "));
+    Serial.print(F("\r\nLeft: "));
     Serial.print(motor_data.motor_left_pwm);
     Serial.print(F(", "));
     Serial.print(motor_data.motor_left_dir);
@@ -545,7 +535,7 @@ void print_debug_data() {  // Depending on the debug flags, this function prints
     Serial.print(motor_data.motor_left_stop);
     Serial.print(F(", "));
     Serial.print(motor_data.motor_left_update);
-    Serial.print(F(" | MotorRight: "));
+    Serial.print(F(" | Right: "));
     Serial.print(motor_data.motor_right_pwm);
     Serial.print(F(", "));
     Serial.print(motor_data.motor_right_dir);
