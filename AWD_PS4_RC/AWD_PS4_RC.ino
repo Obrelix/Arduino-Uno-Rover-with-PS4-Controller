@@ -257,43 +257,36 @@ void check_turbo_mode() {  // This function checks for a specific button sequenc
 }
 
 void check_speed_mode() {
-  if (turbo_data.ENABLED) return;
-  if (controller_data.up_Btn) {
-    speed_mode++;  // Increase the drive mode.
-    pwm_max = turbo_data.ENABLED ? PWM_MAX : PWM_SLOW;
-    if (speed_mode >= 6) {
-      speed_mode = 6;
-      set_rumble_on(254, 1000);
-    }
-  } else if (controller_data.down_Btn) {
-    pwm_max = turbo_data.ENABLED ? PWM_MAX : PWM_SLOW;
-    speed_mode--;  // Decrease the drive mode.
-    if (speed_mode <= 0) {
-      speed_mode = 0;
-      set_rumble_on(150, 1000);
-    }
-  }
+  if (turbo_data.ENABLED) return;  // If Turbo Mode is enabled, exit the function.
   if (controller_data.down_Btn || controller_data.up_Btn) {
+    speed_mode += controller_data.up_Btn ? 1 : -1;
+    if (speed_mode >= 6) {  
+      speed_mode = 6;
+      set_rumble_on(254, 1000); // Enable rumble feedback and set it to a high intensity.
+    } else if (speed_mode <= 0) {
+      speed_mode = 0;
+      set_rumble_on(150, 1000); // Enable rumble feedback and set it to a medium intensity.
+    }
+    pwm_max = PWM_SLOW;
     pwm_max += speed_mode * PWM_BOOST;
-    set_controller_color();
-    Serial.print(F("\r\nSPEED MODE: "));  // Print the status of the turbo mode to the serial monitor.
+    set_controller_color(); // Update the LED color on the controller to reflect the speed mode.
+    Serial.print(F("\r\nSPEED MODE: "));  // Print the status of the speed mode to the serial monitor.
     Serial.print(speed_mode);
   }
 }
 
 void check_kill_rumble() {
   if (rumble_data.ENABLED && current_millis - rumble_data.last_enabled_millis > rumble_data.delay) {
-    rumble_data.last_enabled_millis = current_millis;
-    rumble_data.ENABLED = false;
-    PS4.setRumbleOn(0, 0);
+    rumble_data.ENABLED = false; // Disable rumble feedback.
+    PS4.setRumbleOn(0, 0);// Turn off rumble.
   }
 }
 
 void set_rumble_on(uint8_t rumble_value, uint16_t delay) {
-  PS4.setRumbleOn(0, rumble_value);
-  rumble_data.ENABLED = true;
-  rumble_data.last_enabled_millis = current_millis;
-  rumble_data.delay = delay;
+  PS4.setRumbleOn(0, rumble_value); // Enable rumble feedback with the specified intensity.
+  rumble_data.ENABLED = true; // Mark rumble feedback as enabled.
+  rumble_data.last_enabled_millis = current_millis; // Record the current time.
+  rumble_data.delay = delay; // Set the delay duration for rumble feedback.
 }
 
 bool check_controller_connection() {  // This function checks if the PS4 controller is connected and handles connection-related messages.
@@ -325,62 +318,6 @@ bool check_abort() {  // This function handles aborting the operation if the PS 
     return 1;
   }
   return 0;
-}
-
-void set_drive_mode() {  // This function sets the drive mode based on the controller's button presses. The drive mode determines how the motors respond to controller inputs.
-  if (controller_data.options_Btn) {
-    mode++;  // Increase the drive mode.
-    if (mode > mode_count)
-      mode = 0;
-    speed_mode = 0;
-  } else if (controller_data.share_Btn) {
-    mode--;  // Decrease the drive mode.
-    if (mode < 0)
-      mode = mode_count;
-  }
-  if (controller_data.options_Btn || controller_data.share_Btn) {
-    set_rumble_on(254, 600);
-    PS4.setLedFlash(0, 0);  // Turn off blinking
-    turbo_data.ENABLED = false;
-    turbo_data.RESETED = 1;
-    turbo_data.last_pressed_millis = current_millis;
-    // RESET PWM values 
-    pwm_max = PWM_SLOW;
-    steering_pwm_min = PWM_MIN + PWM_STEERING_BOOST;
-    steering_pwm_max = PWM_SLOW + PWM_STEERING_BOOST;
-    speed_mode = 0;
-    set_controller_color();
-    print_mode();
-  }
-  prev_motor_data = motor_data;
-  trigger_throttle_value = controller_data.R2 - controller_data.L2;
-  switch (mode) {
-    case 0:  // Car mode controlled with the joysticks
-      set_direction_data(controller_data.joy_right_PotY, 0, 110, 254, 140);
-      set_steering_data(controller_data.joy_left_PotX, 0, 105, 254, 145);
-      set_motor_data();
-      break;
-    case 1:  // Car mode controlled with the R2,L2 triggers and the left joystick
-      set_direction_data(trigger_throttle_value, -255, -10, 255, 10);
-      set_steering_data(controller_data.joy_left_PotX, 0, 105, 254, 145);
-      set_motor_data();
-      break;
-    case 2:  // Car mode controlled with the R2,L2 triggers and the accelerometer
-      set_direction_data(trigger_throttle_value, -255, -10, 255, 10);
-      set_steering_data(controller_data.acc_x, -8500, -2000, 8500, 2000);
-      set_motor_data();
-      break;
-    case 3:  // Car mode controlled only with the accelerometer
-      set_direction_data(controller_data.acc_y, -8500, -2000, 8500, 2000);
-      set_steering_data(controller_data.acc_x, -8500, -2000, 8500, 2000);
-      set_motor_data();
-      break;
-    case 4:  // Tank mode controlled with the joysticks
-      set_tank_mode();
-      break;
-    default:
-      break;
-  }
 }
 
 // This function sets the motor control mode for a tank-style robot based on joystick input.
@@ -422,6 +359,62 @@ void set_tank_mode() {
   // Determine if the motor control values have been updated.
   motor_data.motor_left_update = (prev_motor_data.motor_left_dir != motor_data.motor_left_dir || prev_motor_data.motor_left_pwm != motor_data.motor_left_pwm);
   motor_data.motor_right_update = (prev_motor_data.motor_right_dir != motor_data.motor_right_dir || prev_motor_data.motor_right_pwm != motor_data.motor_right_pwm);
+}
+
+void set_drive_mode() {  // This function sets the drive mode based on the controller's button presses. The drive mode determines how the motors respond to controller inputs.
+  if (controller_data.options_Btn) {
+    mode++;  // Increase the drive mode.
+    if (mode > mode_count)
+      mode = 0;
+    speed_mode = 0;
+  } else if (controller_data.share_Btn) {
+    mode--;  // Decrease the drive mode.
+    if (mode < 0)
+      mode = mode_count;
+  }
+  if (controller_data.options_Btn || controller_data.share_Btn) {
+    set_rumble_on(254, 600);
+    PS4.setLedFlash(0, 0);  // Turn off blinking
+    turbo_data.ENABLED = false;
+    turbo_data.RESETED = 1;
+    turbo_data.last_pressed_millis = current_millis;
+    // RESET PWM values
+    pwm_max = PWM_SLOW;
+    steering_pwm_min = PWM_MIN + PWM_STEERING_BOOST;
+    steering_pwm_max = PWM_SLOW + PWM_STEERING_BOOST;
+    speed_mode = 0;
+    set_controller_color(); // Update the LED color on the controller.
+    print_mode(); // Print the current drive mode to the console.
+  }
+  prev_motor_data = motor_data;
+  trigger_throttle_value = controller_data.R2 - controller_data.L2;
+  switch (mode) {
+    case 0:  // Car mode controlled with the joysticks
+      set_direction_data(controller_data.joy_right_PotY, 0, 110, 254, 140);
+      set_steering_data(controller_data.joy_left_PotX, 0, 105, 254, 145);
+      set_motor_data();
+      break;
+    case 1:  // Car mode controlled with the R2,L2 triggers for throttle and the left joystick for steering.
+      set_direction_data(trigger_throttle_value, -255, -10, 255, 10);
+      set_steering_data(controller_data.joy_left_PotX, 0, 105, 254, 145);
+      set_motor_data();
+      break;
+    case 2:  // Car mode controlled with the R2,L2 for throttle triggers and the accelerometer for steering.
+      set_direction_data(trigger_throttle_value, -255, -10, 255, 10);
+      set_steering_data(controller_data.acc_x, -8500, -2000, 8500, 2000);
+      set_motor_data();
+      break;
+    case 3:  // Car mode controlled only with the accelerometer
+      set_direction_data(controller_data.acc_y, -8500, -2000, 8500, 2000);
+      set_steering_data(controller_data.acc_x, -8500, -2000, 8500, 2000);
+      set_motor_data();
+      break;
+    case 4:  // Tank mode controlled with the joysticks
+      set_tank_mode();
+      break;
+    default:
+      break;
+  }
 }
 
 // This function sets the drive direction and throttle value based on the input throttle parameter, considering the specified minimum and maximum values with offsets.
